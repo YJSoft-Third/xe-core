@@ -141,42 +141,45 @@ class pointController extends point
 
 		$oDocumentModel = getModel('document');
 		$oDocument = $oDocumentModel->getDocument($document_srl);
-		if(!$oDocument->isExists()) return new Object();
-		// Get the point module information
-		$oModuleModel = getModel('module');
-		$config = $oModuleModel->getModuleConfig('point');
-		$module_config = $oModuleModel->getModulePartConfig('point',$oDocument->get('module_srl'));
-		// The process related to clearing the post comments
-		$comment_point = $module_config['insert_comment'];
-		if(strlen($comment_point) == 0 && !is_int($comment_point)) $comment_point = $config->insert_comment;
-		// If there are comment points, attempt to deduct
-		if($comment_point>0) return new Object();
-		// Get all the comments related to this post
-		$cp_args = new stdClass();
-		$cp_args->document_srl = $document_srl;
-		$output = executeQueryArray('point.getCommentUsers', $cp_args);
-		// Return if there is no object
-		if(!$output->data) return new Object();
-		// Organize the member number
-		$member_srls = array();
-		$cnt = count($output->data);
-		for($i=0;$i<$cnt;$i++)
+		if($obj->status != $oDocumentModel->getConfigStatus('temp'))
 		{
-			if($output->data[$i]->member_srl<1) continue;
-			$member_srls[abs($output->data[$i]->member_srl)] = $output->data[$i]->count;
-		}
-		// Remove the member number who has written the original post
-		if($member_srl) unset($member_srls[abs($member_srl)]);
-		if(!count($member_srls)) return new Object();
-		// Remove all the points for each member
-		$oPointModel = getModel('point');
-		// Get the points
-		$point = $module_config['download_file'];
-		foreach($member_srls as $member_srl => $cnt)
-		{
-			$cur_point = $oPointModel->getPoint($member_srl, true);
-			$cur_point -= $cnt * $comment_point;
-			$this->setPoint($member_srl,$cur_point);
+			if(!$oDocument->isExists()) return new Object();
+			// Get the point module information
+			$oModuleModel = getModel('module');
+			$config = $oModuleModel->getModuleConfig('point');
+			$module_config = $oModuleModel->getModulePartConfig('point',$oDocument->get('module_srl'));
+			// The process related to clearing the post comments
+			$comment_point = $module_config['insert_comment'];
+			if(strlen($comment_point) == 0 && !is_int($comment_point)) $comment_point = $config->insert_comment;
+			// If there are comment points, attempt to deduct
+			if($comment_point>0) return new Object();
+			// Get all the comments related to this post
+			$cp_args = new stdClass();
+			$cp_args->document_srl = $document_srl;
+			$output = executeQueryArray('point.getCommentUsers', $cp_args);
+			// Return if there is no object
+			if(!$output->data) return new Object();
+			// Organize the member number
+			$member_srls = array();
+			$cnt = count($output->data);
+			for($i=0;$i<$cnt;$i++)
+			{
+				if($output->data[$i]->member_srl<1) continue;
+				$member_srls[abs($output->data[$i]->member_srl)] = $output->data[$i]->count;
+			}
+			// Remove the member number who has written the original post
+			if($member_srl) unset($member_srls[abs($member_srl)]);
+			if(!count($member_srls)) return new Object();
+			// Remove all the points for each member
+			$oPointModel = getModel('point');
+			// Get the points
+			$point = $module_config['download_file'];
+			foreach($member_srls as $member_srl => $cnt)
+			{
+				$cur_point = $oPointModel->getPoint($member_srl, true);
+				$cur_point -= $cnt * $comment_point;
+				$this->setPoint($member_srl,$cur_point);
+			}
 		}
 
 		return new Object();
